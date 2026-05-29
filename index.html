@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghi Nhận Huyết Áp</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; text-align: center; font-size: 24px; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #333; font-size: 32px; margin-bottom: 20px; }
+        label { display: block; margin-top: 15px; font-weight: bold; text-align: left; font-size: 26px; }
+        input, select, textarea { width: 100%; padding: 15px; margin-top: 5px; box-sizing: border-box; border: 2px solid #ccc; border-radius: 10px; font-size: 26px; }
+        .radio-group { display: flex; justify-content: space-between; margin-top: 10px; gap: 15px; }
+        .radio-btn { flex: 1; padding: 20px; border: 3px solid #ccc; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 28px; background: #fff; transition: 0.2s; }
+        .radio-btn.active { border-color: #007bff; background-color: #e6f2ff; color: #007bff; }
+        button { width: 100%; padding: 20px; background-color: #28a745; color: white; border: none; border-radius: 12px; font-size: 30px; font-weight: bold; margin-top: 30px; cursor: pointer; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        #message { margin-top: 20px; font-weight: bold; font-size: 26px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>ỨNG DỤNG ĐO HUYẾT ÁP</h2>
+    
+    <label>1. Người đo:</label>
+    <div class="radio-group">
+        <div class="radio-btn" id="btn-ong" onclick="selectUser('Ông')">ÔNG</div>
+        <div class="radio-btn" id="btn-ba" onclick="selectUser('Bà')">BÀ</div>
+    </div>
+
+    <label style="margin-top:25px;">2. Ngày giờ đo:</label>
+    <input type="datetime-local" id="ngayGio">
+
+    <label>3. HA Tâm thu (Số trên):</label>
+    <input type="number" id="tamThu" placeholder="Ví dụ: 120" inputmode="numeric">
+
+    <label>4. HA Tâm trương (Số dưới):</label>
+    <input type="number" id="tamTruong" placeholder="Ví dụ: 80" inputmode="numeric">
+
+    <label>5. Nhịp tim:</label>
+    <input type="number" id="nhipTim" placeholder="Ví dụ: 75" inputmode="numeric">
+
+    <label>6. Ghi chú (Nếu có):</label>
+    <textarea id="ghiChu" rows="2" placeholder="Mệt, sau đi bộ..."></textarea>
+
+    <button id="btnSubmit" onclick="guiDuLieu()">BẤM ĐỂ LƯU SỐ ĐO</button>
+    <div id="message"></div>
+</div>
+
+<script>
+    // ĐỊNH CẤU HÌNH ĐƯỜNG LINK GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPW1jvzhXLLctQvMMbnwguuU7vhumVX_eopVfIOi_x_Vy_VhxEvm7jIeOOvTZcucdz/exec";
+
+    let nguoiDoSelected = "";
+
+    // Tự động điền ngày giờ hiện tại theo giờ Việt Nam khi mở app
+    window.onload = function() {
+        const giờVN = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        document.getElementById('ngayGio').value = giờVN;
+    };
+
+    function selectUser(user) {
+        nguoiDoSelected = user;
+        document.getElementById('btn-ong').classList.remove('active');
+        document.getElementById('btn-ba').classList.remove('active');
+        if(user === 'Ông') document.getElementById('btn-ong').classList.add('active');
+        if(user === 'Bà') document.getElementById('btn-ba').classList.add('active');
+    }
+
+    function guiDuLieu() {
+        const ngayGioRaw = document.getElementById('ngayGio').value;
+        const tamThu = document.getElementById('tamThu').value;
+        const tamTruong = document.getElementById('tamTruong').value;
+        const nhipTim = document.getElementById('nhipTim').value;
+        const ghiChu = document.getElementById('ghiChu').value;
+        const btn = document.getElementById('btnSubmit');
+        const msg = document.getElementById('message');
+
+        // Kiểm tra hợp lệ dữ liệu cơ bản
+        if (!nguoiDoSelected) { alert("Xin vui lòng bấm chọn người đo (Ông hoặc Bà)!"); return; }
+        if (!ngayGioRaw || !tamThu || !tamTruong || !nhipTim) { alert("Xin vui lòng điền đầy đủ các thông số đo!"); return; }
+
+        // Định dạng lại ngày giờ hiển thị trên Google Sheet cho đẹp mắt (DD/MM/YYYY HH:MM)
+        const d = new Date(ngayGioRaw);
+        const ngayGioFormatted = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+
+        // Khóa nút bấm ngay để tránh ông bà bấm nhầm liên tiếp
+        btn.disabled = true;
+        btn.innerText = "ĐANG LƯU DỮ LIỆU...";
+        msg.style.color = "orange";
+        msg.innerText = "Đang gửi dữ liệu lên bảng tính, xin chờ chút...";
+
+        const payload = {
+            ngayGio: ngayGioFormatted,
+            nguoiDo: nguoiDoSelected,
+            tamThu: Number(tamThu),
+            tamTruong: Number(tamTruong),
+            nhipTim: Number(nhipTim),
+            ghiChu: ghiChu
+        };
+
+        // Gửi dữ liệu tới cầu nối Google Apps Script bằng Fetch API
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.result === "success") {
+                msg.style.color = "green";
+                msg.innerText = "LƯU THÀNH CÔNG! Số đo đã vào bảng tính.";
+                // Xóa form để sẵn sàng cho lần nhập sau
+                document.getElementById('tamThu').value = '';
+                document.getElementById('tamTruong').value = '';
+                document.getElementById('nhipTim').value = '';
+                document.getElementById('ghiChu').value = '';
+                // Đặt lại giờ mới nhất
+                const giờVN = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                document.getElementById('ngayGio').value = giờVN;
+            } else {
+                msg.style.color = "red";
+                msg.innerText = "Gặp lỗi: " + data.error;
+            }
+        })
+        .catch(error => {
+            msg.style.color = "red";
+            msg.innerText = "Lỗi kết nối mạng! Xin kiểm tra lại mạng Wifi/4G.";
+        })
+        .finally(() => {
+            // Mở khóa lại nút bấm sau khi xử lý xong
+            btn.disabled = false;
+            btn.innerText = "BẤM ĐỂ LƯU SỐ ĐO";
+        });
+    }
+</script>
+</body>
+</html>

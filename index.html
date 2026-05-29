@@ -125,7 +125,11 @@
                 // TỰ ĐỘNG LÀM MỚI KHUNG LỊCH SỬ SAU 1 GIÂY (Để chờ Google Sheets cập nhật xong bộ nhớ đệm)
                 setTimeout(function() {
                     const iframe = document.getElementById('khungLichSu');
-                    if(iframe) { iframe.src = iframe.src; }
+                    if(iframe) { 
+                        // Lấy link gốc, cắt bỏ phần tham số cũ nếu có, rồi cộng thêm mốc thời gian hiện tại
+                        let srcUrl = iframe.src.split('&cache_bypass=')[0];
+                        iframe.src = srcUrl + '&cache_bypass=' + new Date().getTime(); 
+                    }
                 }, 2000);
                 
             } else {

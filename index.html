@@ -185,12 +185,14 @@
                 currentLogs.shift(); // Xóa phần tử đầu tiên
                 saveStoredLogs(currentLogs);
 
-                // Nạp lại iframe lịch sử để cập nhật dòng mới
-                const iframe = document.getElementById('khungLichSu');
-                if (iframe) {
-                    let srcUrl = iframe.src.split('&cache_bypass=')[0];
-                    iframe.src = srcUrl + '&cache_bypass=' + new Date().getTime();
-                }
+                // ĐỢI 5 GIÂY CHO GOOGLE SHEETS CẬP NHẬT RỒI MỚI NẠP LẠI KHUNG LỊCH SỬ
+                setTimeout(function() {
+                    const iframe = document.getElementById('khungLichSu');
+                    if (iframe) {
+                        let srcUrl = iframe.src.split('&cache_bypass=')[0];
+                        iframe.src = srcUrl + '&cache_bypass=' + new Date().getTime();
+                    }
+                }, 5000);
 
                 isSyncing = false;
                 // Tiếp tục gọi đệ quy để gửi số đo tiếp theo nếu còn trong hàng chờ
